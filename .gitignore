@@ -12,3 +12,5 @@ data/
 # Keep sample data in the repository.
 !sample_data/
 !sample_data/**
+*.mov
+*.mp4
