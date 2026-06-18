@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PaperAgent - 论文拆解助手</title>
+<style>
+:root{--primary:#6366f1;--primary-light:#818cf8;--primary-dark:#4f46e5;--bg:#0f1117;--bg2:#161822;--bg-card:#1c1f2e;--bg-hover:#252839;--border:#2a2d3e;--text:#e2e4e9;--text2:#9ca3af;--muted:#6b7280;--success:#22c55e;--danger:#ef4444;--warning:#f59e0b;--user-bg:#2d3148;--bot-bg:#1e2235;--radius:12px;--radius-sm:8px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.app{display:flex;height:100vh}
+
+/* Sidebar */
+.sidebar{width:280px;min-width:280px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar-hd{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.logo{width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--primary-light));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:700}
+.sidebar-hd h1{font-size:16px;font-weight:600}.sidebar-hd h1 small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.tabs{display:flex;border-bottom:1px solid var(--border)}
+.tabs button{flex:1;padding:10px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;position:relative;transition:color .2s}
+.tabs button.active{color:var(--primary-light)}
+.tabs button.active::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;background:var(--primary);border-radius:2px}
+.sb-content{flex:1;overflow-y:auto;padding:8px}
+.new-btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;background:var(--bg-card);border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--text2);font-size:13px;cursor:pointer;margin-bottom:8px;transition:all .2s}
+.new-btn:hover{border-color:var(--primary);color:var(--primary-light);background:var(--bg-hover)}
+.si,.pi{padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s;margin-bottom:2px}
+.si:hover,.pi:hover{background:var(--bg-hover)}
+.si.active{background:var(--bg-card);border-left:3px solid var(--primary)}
+.si{position:relative;overflow:visible}
+.si .t{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.si .m{font-size:11px;color:var(--muted);margin-top:4px}
+.si .head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.si .head .t{flex:1;min-width:0}
+.si .pin{display:inline-block;margin-right:6px;color:var(--primary-light);font-size:11px}
+.si .more{width:24px;height:24px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;flex-shrink:0;transition:all .18s ease}
+.si .more:hover{border-color:var(--border);background:var(--bg-hover);color:var(--text)}
+.si .menu{position:absolute;top:12px;right:-6px;width:188px;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);box-shadow:0 18px 40px rgba(0,0,0,.34);z-index:14;animation:popoverIn .18s ease;cursor:default}
+.si .menu::before{content:'';position:absolute;top:14px;left:-7px;width:12px;height:12px;background:var(--bg-card);border-left:1px solid var(--border);border-bottom:1px solid var(--border);transform:rotate(45deg)}
+.si .menu button{width:100%;text-align:left;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all .18s ease}
+.si .menu button:hover{background:var(--bg-hover);border-color:var(--border);color:var(--primary-light)}
+.si .menu .danger:hover{background:rgba(127,29,29,.18);border-color:rgba(239,68,68,.35);color:#fca5a5}
+.si .inline-panel{position:absolute;top:calc(100% - 6px);right:8px;width:230px;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);box-shadow:0 18px 40px rgba(0,0,0,.34);z-index:13;animation:popoverIn .18s ease;cursor:default}
+.si .inline-panel::before{content:'';position:absolute;top:-7px;right:22px;width:12px;height:12px;background:var(--bg-card);border-left:1px solid var(--border);border-top:1px solid var(--border);transform:rotate(45deg)}
+.si .inline-panel .ttl{font-size:12px;color:var(--primary-light);font-weight:600;margin-bottom:10px}
+.si .inline-panel input{width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none}
+.si .inline-panel input:focus{border-color:var(--primary)}
+.si .inline-panel .row{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+.si .inline-panel .row button{padding:8px 14px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2)}
+.si .inline-panel .row button:hover{border-color:var(--primary);color:var(--primary-light)}
+.si .inline-panel .row .save{background:var(--primary);border-color:var(--primary);color:#fff}
+.si .inline-panel .row .save:hover{background:var(--primary-dark);color:#fff}
+.si .inline-panel .row .cancel:hover{border-color:var(--danger);color:var(--danger)}
+.pi{position:relative;overflow:visible}
+.pi .t{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pi .kw{font-size:11px;color:var(--muted);margin-top:3px}
+.pi .acts{display:flex;gap:6px;margin-top:8px}
+.pi .acts button{font-size:11px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text2);cursor:pointer;transition:all .18s ease}
+.pi .acts button:hover{border-color:var(--primary);color:var(--primary-light);transform:translateY(-1px)}
+.pi .acts .del{border-color:rgba(239,68,68,.35);color:#fca5a5;background:rgba(127,29,29,.12)}
+.pi .acts .del:hover{border-color:var(--danger);color:#fff;background:rgba(239,68,68,.88)}
+.pi .inline-cat{position:absolute;top:calc(100% - 6px);right:8px;width:230px;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);box-shadow:0 18px 40px rgba(0,0,0,.34);z-index:12;animation:popoverIn .18s ease;cursor:default}
+.pi .inline-cat::before{content:'';position:absolute;top:-7px;right:22px;width:12px;height:12px;background:var(--bg-card);border-left:1px solid var(--border);border-top:1px solid var(--border);transform:rotate(45deg)}
+.pi .inline-cat .ttl{font-size:12px;color:var(--primary-light);font-weight:600;margin-bottom:10px}
+.pi .inline-cat select{width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none}
+.pi .inline-cat select:focus{border-color:var(--primary)}
+.pi .inline-cat .row{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+.pi .inline-cat .row button{padding:8px 14px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2)}
+.pi .inline-cat .row button:hover{border-color:var(--primary);color:var(--primary-light)}
+.pi .inline-cat .row .save{background:var(--primary);border-color:var(--primary);color:#fff}
+.pi .inline-cat .row .save:hover{background:var(--primary-dark);color:#fff}
+.pi .inline-cat .row .cancel:hover{border-color:var(--danger);color:var(--danger)}
+.paper-filter{margin-bottom:10px}
+.paper-filter .shell{position:relative;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);box-shadow:0 12px 28px rgba(0,0,0,.18)}
+.paper-filter .lbl{display:block;font-size:11px;color:var(--primary-light);font-weight:600;margin-bottom:8px;letter-spacing:.3px}
+.paper-filter .shell::after{content:'▾';position:absolute;right:14px;bottom:12px;color:var(--muted);font-size:12px;pointer-events:none}
+.paper-filter select{appearance:none;-webkit-appearance:none;width:100%;padding:10px 34px 10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none;transition:border-color .18s ease, box-shadow .18s ease}
+.paper-filter select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.sb-ft{padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.main-hd{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2)}
+.main-hd .pt{font-size:15px;font-weight:600}
+.ha{display:flex;gap:8px}
+.ha button{padding:6px 14px;border-radius:var(--radius-sm);font-size:13px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);cursor:pointer;transition:all .2s}
+.ha button:hover{border-color:var(--primary);color:var(--primary-light)}
+.ha .pri{background:var(--primary);border-color:var(--primary);color:#fff}
+.ha .pri:hover{background:var(--primary-dark)}
+
+.chat-area{flex:1;overflow-y:auto;padding:24px}
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;color:var(--muted)}
+.welcome .icon{font-size:48px;margin-bottom:16px;opacity:.5}
+.welcome h2{font-size:20px;color:var(--text2);margin-bottom:8px}
+.welcome p{font-size:14px;max-width:400px;line-height:1.6}
+
+.msg{display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;max-width:860px;margin-left:auto;margin-right:auto}
+.msg.user{flex-direction:row-reverse}
+.msg .av{width:34px;height:34px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;margin-top:2px}
+.msg.assistant .av{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff}
+.msg.user .av{background:var(--user-bg);color:var(--primary-light)}
+.bubble{display:inline-block;width:fit-content;max-width:min(100%,680px);padding:12px 16px;border-radius:var(--radius);line-height:1.7;font-size:14px;white-space:pre-wrap;word-break:normal;overflow-wrap:anywhere}
+.msg.assistant .bubble{background:var(--bot-bg);border:1px solid var(--border)}
+.msg.user .bubble{background:var(--user-bg);border:1px solid var(--border)}
+.bubble strong{color:var(--primary-light)}
+.bubble ul,.bubble ol{padding-left:18px;margin:6px 0}
+.bubble li{margin:3px 0}
+.bubble code{background:var(--bg);padding:2px 6px;border-radius:4px;font-size:13px}
+.bubble pre{background:var(--bg);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;margin:8px 0}
+.bubble pre code{background:none;padding:0}
+.msg .time{font-size:11px;color:var(--muted);margin-top:4px;text-align:left}
+.msg-col{display:flex;flex:1;flex-direction:column;min-width:0;max-width:calc(100% - 44px)}
+.msg.assistant .msg-col{align-items:flex-start}
+.msg.user .msg-col{align-items:flex-end}
+.msg.user .time{text-align:right}
+.msg-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;opacity:0;transform:translateY(4px);pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+.msg:hover .msg-tools,.msg:focus-within .msg-tools,.msg-tools.force-show{opacity:1;transform:translateY(0);pointer-events:auto}
+.msg-tools .icon-btn,.rev-nav button{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:999px;border:1px solid var(--border);background:rgba(22,24,34,.92);color:var(--text2);cursor:pointer;transition:all .18s ease}
+.msg-tools .icon-btn:hover,.rev-nav button:hover{border-color:var(--primary);color:var(--primary-light);background:var(--bg-hover);transform:translateY(-1px)}
+.msg-tools .icon-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s ease, opacity .2s ease}
+.msg-tools .icon-btn.copied{border-color:rgba(34,197,94,.45);color:var(--success);background:rgba(21,128,61,.14)}
+.msg-tools .icon-btn.copied svg{transform:scale(1.08)}
+.turn-block{margin-bottom:18px}
+.rev-nav{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin:0}
+.rev-nav span{font-size:11px;color:var(--muted)}
+.edit-wrap{display:flex;flex-direction:column;gap:8px}
+.edit-wrap textarea{width:100%;min-height:88px;padding:10px 12px;border-radius:14px;border:1px solid var(--border);background:linear-gradient(180deg,rgba(15,17,23,.98),rgba(28,31,46,.96));color:var(--text);font-size:14px;resize:vertical;font-family:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+.edit-wrap textarea:focus{outline:none;border-color:var(--primary)}
+.edit-row{display:flex;justify-content:flex-end;gap:8px}
+.edit-row button{padding:7px 14px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;font-size:12px}
+.edit-row .save{background:var(--primary);border-color:var(--primary);color:#fff}
+.edit-row .save:hover{background:var(--primary-dark)}
+.edit-row .cancel:hover{border-color:var(--danger);color:var(--danger)}
+.sb.stop{background:rgba(239,68,68,.9)}
+.sb.stop:hover{background:#dc2626}
+.mini-spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+
+/* Sources */
+.sources{margin-top:10px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border)}
+.sources h5{font-size:12px;color:var(--primary-light);margin-bottom:6px}
+.source-item{font-size:12px;color:var(--muted);margin-bottom:4px;padding:4px 8px;background:var(--bg2);border-radius:4px}
+.source-item strong{display:block;color:var(--text);font-size:12px;margin-bottom:2px}
+.source-item .meta{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
+.source-item .score{color:var(--primary-light);font-weight:600}
+
+/* Decompose result */
+.dr{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin:12px 0;max-width:800px;margin-left:auto;margin-right:auto}
+.dr h2{font-size:18px;margin-bottom:4px}.dr .meta{font-size:13px;color:var(--muted);margin-bottom:16px}
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+.dc.full{grid-column:1/-1}
+.dc h4{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--primary-light);margin-bottom:8px;font-weight:600}
+.dc p,.dc li{font-size:13px;line-height:1.6;color:var(--text2)}
+.dc ul{padding-left:16px}
+.tag{display:inline-block;padding:2px 10px;background:var(--bg-hover);border-radius:20px;font-size:12px;color:var(--text2);margin:2px}
+.tag:hover{background:var(--primary);color:#fff;cursor:pointer}
+.kwl{display:flex;flex-wrap:wrap;gap:6px}
+
+/* Input */
+.input-area{padding:16px 24px;border-top:1px solid var(--border);background:var(--bg2)}
+.iw{display:flex;gap:10px;max-width:800px;margin:0 auto}
+.ub{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:var(--radius-sm);background:var(--bg-card);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-size:18px;transition:all .2s;flex-shrink:0;position:relative}
+.ub:hover{border-color:var(--primary);color:var(--primary-light)}
+.ub input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.ci{flex:1;padding:10px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;outline:none;resize:none;font-family:inherit;min-height:42px;max-height:120px}
+.ci:focus{border-color:var(--primary)}.ci::placeholder{color:var(--muted)}
+.sb{width:42px;height:42px;border-radius:var(--radius-sm);background:var(--primary);border:none;color:#fff;cursor:pointer;font-size:16px;transition:all .2s;flex-shrink:0}
+.sb:hover{background:var(--primary-dark)}.sb:disabled{opacity:.4;cursor:not-allowed}
+.rag-toggle{display:flex;align-items:center;gap:12px;max-width:800px;margin:0 auto 6px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+
+/* Category */
+.cat-list{margin-bottom:16px}
+.cat-item{position:relative;overflow:visible;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid var(--border);margin-bottom:6px;transition:background .15s}
+.cat-item:hover{background:var(--bg-hover)}
+.cat-item .cat-color{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.cat-item .cat-name{font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat-item .cat-count{font-size:11px;color:var(--muted);flex-shrink:0}
+.cat-item .cat-desc{font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat-item .cat-acts button{font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;margin-left:2px}
+.cat-item .cat-acts button:hover{border-color:var(--primary);color:var(--primary-light)}
+.cat-item .cat-acts .del:hover{border-color:var(--danger);color:var(--danger)}
+.cat-item .inline-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 48px));max-height:min(420px,calc(100vh - 120px));overflow-y:auto;padding:16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);box-shadow:0 24px 56px rgba(0,0,0,.4);z-index:120;animation:centerPopIn .16s ease-out;cursor:default}
+.cat-item .inline-panel::before{display:none}
+.cat-item .inline-panel input{width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none}
+.cat-item .inline-panel input:focus{border-color:var(--primary)}
+.cat-item .inline-panel input[type=color]{height:38px;padding:4px;cursor:pointer}
+.cat-item .inline-panel .stack{display:flex;flex-direction:column;gap:10px}
+.cat-item .inline-panel .row{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+.cat-item .inline-panel .row button{padding:8px 14px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2)}
+.cat-item .inline-panel .row button:hover{border-color:var(--primary);color:var(--primary-light)}
+.cat-item .inline-panel .row .save{background:var(--primary);border-color:var(--primary);color:#fff}
+.cat-item .inline-panel .row .save:hover{background:var(--primary-dark);color:#fff}
+.cat-item .inline-panel .row .cancel:hover{border-color:var(--danger);color:var(--danger)}
+.cat-add-row{display:flex;gap:8px;margin-bottom:12px}
+.cat-add-row input{flex:1;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none}
+.cat-add-row input:focus{border-color:var(--primary)}
+.cat-add-row input[type=color]{width:42px;height:38px;padding:2px;cursor:pointer;flex:none}
+.cat-add-row button{padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--primary);background:var(--primary);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap}
+.cat-add-row button:hover{background:var(--primary-dark)}
+.cat-select-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.cat-select-row select{flex:1;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none}
+.cat-select-row select:focus{border-color:var(--primary)}
+.rag-cat-select{padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;outline:none;cursor:pointer}
+.rag-cat-select:focus{border-color:var(--primary)}
+.paper-cat-badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;color:#fff;margin-left:6px}
+
+.typing{display:flex;gap:4px;padding:8px 0}
+.typing span{width:6px;height:6px;background:var(--muted);border-radius:50%;animation:blink 1.4s infinite both}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+@keyframes popoverIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes centerPopIn{from{opacity:0;transform:translate(-50%,-50%) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.task-progress{margin-top:12px}
+.task-progress .track{height:8px;background:var(--bg);border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+.task-progress .fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--primary-light));border-radius:999px;transition:width .35s ease}
+.task-progress .meta{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted);margin-top:6px}
+
+/* Modal */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.mo.show{opacity:1;pointer-events:auto}
+.md{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);width:90%;max-width:700px;max-height:80vh;overflow-y:auto;padding:24px}
+.md h2{font-size:16px;margin-bottom:16px}
+.mc{float:right;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}.mc:hover{color:var(--text)}
+
+.mi{padding:10px 12px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid var(--border);margin-bottom:6px}
+.mi .cat{font-size:11px;color:var(--primary-light);font-weight:600;text-transform:uppercase}
+.mi .txt{font-size:13px;margin-top:4px;color:var(--text2)}
+
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+
+/* Batch Upload */
+.drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:40px 20px;text-align:center;color:var(--muted);transition:all .2s;cursor:pointer;margin-bottom:16px}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--primary);background:var(--bg-hover);color:var(--primary-light)}
+.drop-zone .dz-icon{font-size:36px;margin-bottom:10px}
+.drop-zone p{font-size:13px;margin-top:6px}
+.dir-row{display:flex;gap:8px;margin-bottom:16px}
+.dir-row input{flex:1;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none}
+.dir-row input:focus{border-color:var(--primary)}
+.dir-row button{padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--primary);background:var(--primary);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap}
+.dir-row button:hover{background:var(--primary-dark)}
+.batch-stats{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-top:12px}
+.batch-stats .bs-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.batch-stats .bs-row:last-child{margin-bottom:0}
+.batch-stats .bs-ok{color:var(--success)}.batch-stats .bs-err{color:var(--danger)}.batch-stats .bs-skip{color:var(--muted)}
+.batch-file-list{max-height:200px;overflow-y:auto;margin-top:10px}
+.bf-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:4px;font-size:12px;margin-bottom:2px;background:var(--bg)}
+.bf-item .bf-status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.bf-item .bf-ok{background:var(--success)}.bf-item .bf-err{background:var(--danger)}.bf-item .bf-skip{background:var(--muted)}.bf-item .bf-wait{background:#f59e0b}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;margin-top:12px;overflow:hidden}
+.progress-bar .fill{height:100%;background:var(--primary);border-radius:2px;transition:width .3s}
+
+/* Settings */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:500}
+.form-group select,.form-group input[type=number],.form-group input[type=text]{width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none}
+.form-group select:focus,.form-group input:focus{border-color:var(--primary)}
+.form-group .hint{font-size:11px;color:var(--muted);margin-top:4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.form-actions button{padding:8px 20px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;border:1px solid var(--border)}
+.btn-save{background:var(--primary)!important;color:#fff!important;border-color:var(--primary)!important}
+.btn-save:hover{background:var(--primary-dark)!important}
+.btn-reset{background:none!important;color:var(--danger)!important;border-color:var(--danger)!important}
+.btn-reset:hover{background:var(--danger)!important;color:#fff!important}
+.config-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;font-size:13px;align-items:center}
+.config-card .cc-label{color:var(--muted);font-size:11px}
+.config-card .cc-val{color:var(--primary-light);font-weight:500}
+
+@media(max-width:768px){.sidebar{position:fixed;left:0;top:0;bottom:0;z-index:50;transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.dg{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-hd"><div class="logo">P</div><h1>PaperAgent<small>论文拆解助手</small></h1></div>
+    <div class="tabs">
+      <button class="active" onclick="switchTab('sessions',this)">会话</button>
+      <button onclick="switchTab('papers',this)">知识库</button>
+      <button onclick="switchTab('memories',this)">记忆</button>
+    </div>
+    <div class="sb-content">
+      <div id="tab-sessions"><button class="new-btn" onclick="createSession()">+ 新会话</button><div id="sl"></div></div>
+      <div id="tab-papers" style="display:none">
+        <div class="paper-filter">
+          <div class="shell">
+            <span class="lbl">知识库分类</span>
+            <select id="paper-cat-sel" onchange="selectPaperCat(this)">
+              <option value="">全部分类</option>
+              <option value="__uncategorized__">未分类</option>
+            </select>
+          </div>
+        </div>
+        <div id="pl"></div>
+      </div>
+      <div id="tab-memories" style="display:none"><div id="ml"></div></div>
+    </div>
+    <div class="sb-ft"><span id="stats">...</span><span>v2.0</span></div>
+  </aside>
+
+  <main class="main">
+    <div class="main-hd">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="display:none;border:none;background:none;color:var(--text);font-size:20px;cursor:pointer" id="menu-btn">☰</button>
+        <span class="pt" id="ptitle">新会话</span>
+      </div>
+      <div class="ha">
+        <button onclick="showModal('modal-settings')">设置</button>
+        <button onclick="showModal('modal-cats');loadCats()">分类管理</button>
+        <button onclick="showModal('modal-mem');loadMemoriesHtml()">记忆</button>
+        <button onclick="showModal('modal-batch')">批量导入</button>
+        <button class="pri" onclick="$('fi').click()">上传论文</button>
+        <input type="file" id="fi" accept=".pdf,.txt,.md" style="display:none" onchange="decompose(this.files[0])">
+      </div>
+    </div>
+
+    <div class="chat-area" id="chat-area">
+      <div class="welcome" id="welcome"><div class="icon">📚</div><h2>欢迎使用 PaperAgent</h2><p>上传论文进行智能拆解分析，或批量导入建立向量索引，随时对话提问。</p></div>
+      <div id="msgs"></div>
+    </div>
+
+    <div class="input-area">
+      <div class="rag-toggle">
+        <label><input type="checkbox" id="rag-cb" onchange="toggleRag()"> RAG 模式</label>
+        <select id="rag-cat-sel" class="rag-cat-select" onchange="selectRagCat(this)" style="display:none">
+          <option value="">全部知识库</option>
+          <option value="__uncategorized__">未分类知识库</option>
+        </select>
+        <span id="rag-hint">关闭时为普通对话，开启后从向量库检索相关内容辅助回答</span>
+      </div>
+      <div class="iw">
+        <div class="ub" title="上传论文">📎<input type="file" accept=".pdf,.txt,.md" onchange="decompose(this.files[0])"></div>
+        <textarea class="ci" id="ci" placeholder="输入消息，或上传论文..." rows="1" onkeydown="kd(event)"></textarea>
+        <button class="sb" id="sbtn" onclick="handleComposerAction()" title="发送">➤</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modals -->
+<div class="mo" id="modal-paper"><div class="md"><button class="mc" onclick="hideModal('modal-paper')">&times;</button><h2 id="mp-title">论文详情</h2><div id="mp-body"></div></div></div>
+<div class="mo" id="modal-mem"><div class="md"><button class="mc" onclick="hideModal('modal-mem')">&times;</button><h2>系统记忆</h2><div id="mm-body"></div></div></div>
+<div class="mo" id="modal-upload"><div class="md" style="max-width:520px"><button class="mc" onclick="cancelUploadFlow()">&times;</button><h2>上传前确认</h2>
+  <div class="form-group">
+    <label>文件名</label>
+    <input id="upload-file-name" type="text" disabled>
+  </div>
+  <div class="form-group">
+    <label>标题</label>
+    <input id="upload-title" type="text" placeholder="可选，留空则使用 AI 拆解出的标题">
+    <div class="hint">如果你已经确定标题，可以先填好；不填则按论文拆解结果保存。</div>
+  </div>
+  <div class="form-group">
+    <label>分类</label>
+    <select id="upload-cat-sel"><option value="">不分类</option></select>
+  </div>
+  <div class="form-actions">
+    <button class="btn-reset" onclick="cancelUploadFlow()">取消</button>
+    <button class="btn-save" onclick="confirmUploadFlow()">确认并拆解</button>
+  </div>
+</div></div>
+
+<div class="mo" id="modal-batch"><div class="md" style="max-width:620px"><button class="mc" onclick="hideModal('modal-batch')">&times;</button><h2>批量导入 & 向量索引</h2>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.6">
+    将论文拆分为文本块，经 Embedding 后写入向量数据库。查询时检索相关片段辅助 LLM 回答。<br>
+    <strong style="color:var(--primary-light)">此过程不调用 LLM，纯本地处理。</strong>
+  </div>
+  <div class="cat-select-row">
+    <span style="font-size:12px;color:var(--muted);flex-shrink:0">归入分类:</span>
+    <select id="batch-cat-sel"><option value="">不分类</option></select>
+    <button style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer" onclick="refreshCatSelects();showModal('modal-cats');loadCats()">管理分类</button>
+  </div>
+  <div class="drop-zone" id="drop-zone" onclick="$('batch-fi').click()">
+    <div class="dz-icon">📂</div>
+    <strong>点击选择或拖拽文件到此处</strong>
+    <p>支持 PDF / TXT / MD，可多选</p>
+    <input type="file" id="batch-fi" accept=".pdf,.txt,.md" multiple style="display:none" onchange="onBatchFiles(this.files)">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;color:var(--muted);font-size:13px"><span style="flex:1;height:1px;background:var(--border)"></span>或指定目录<span style="flex:1;height:1px;background:var(--border)"></span></div>
+  <div class="dir-row">
+    <input id="dir-input" placeholder="输入论文目录路径，如 D:\papers">
+    <button onclick="indexDir()">导入目录</button>
+  </div>
+  <div id="batch-result" style="display:none"></div>
+  <div class="progress-bar" id="batch-progress" style="display:none"><div class="fill" id="batch-fill" style="width:0"></div></div>
+</div></div>
+
+<div class="mo" id="modal-settings"><div class="md" style="max-width:550px"><button class="mc" onclick="hideModal('modal-settings')">&times;</button><h2>RAG 设置</h2>
+  <div id="settings-current"></div>
+  <div style="font-size:13px;color:var(--muted);margin:12px 0 8px">配置需要重启服务生效。修改后请重启 server.py。</div>
+  <div class="form-group">
+    <label>向量数据库</label>
+    <select id="cfg-db"><option value="chroma">ChromaDB (内置, 推荐)</option><option value="faiss">FAISS (高性能)</option></select>
+    <div class="hint">存储和检索向量的数据库引擎</div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Embedding 方法</label>
+      <select id="cfg-embed"><option value="chroma">ChromaDB 内置 (零配置)</option><option value="local">本地模型 (sentence-transformers)</option><option value="openai">OpenAI 兼容 API</option></select>
+      <div class="hint">文本向量化的计算方式</div>
+    </div>
+    <div class="form-group">
+      <label>Embedding 模型</label>
+      <input type="text" id="cfg-model" placeholder="模型名称" value="paraphrase-multilingual-MiniLM-L12-v2">
+      <div class="hint">local: HuggingFace 模型名</div>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>分块大小 (字符)</label>
+      <input type="number" id="cfg-chunk" value="500" min="100" max="5000">
+    </div>
+    <div class="form-group">
+      <label>分块重叠 (字符)</label>
+      <input type="number" id="cfg-overlap" value="100" min="0" max="1000">
+    </div>
+  </div>
+  <div class="form-group">
+    <label>RAG 检索 Top-K</label>
+    <input type="number" id="cfg-topk" value="5" min="1" max="20">
+    <div class="hint">每次检索返回的相关片段数量</div>
+  </div>
+  <div class="form-actions">
+    <button class="btn-reset" onclick="resetVector()">清空向量库</button>
+    <button class="btn-save" onclick="saveSettings()">保存配置</button>
+  </div>
+</div></div>
+
+<div class="mo" id="modal-cats"><div class="md" style="max-width:550px"><button class="mc" onclick="hideModal('modal-cats')">&times;</button><h2>知识库分类管理</h2>
+  <p style="font-size:13px;color:var(--text2);margin-bottom:12px">创建分类来组织论文。上传论文时可指定分类，对话时可按分类检索。</p>
+  <div class="cat-add-row">
+    <input type="color" id="new-cat-color" value="#6366f1" title="选择颜色">
+    <input id="new-cat-name" placeholder="分类名称，如: 视觉算法、NLP、强化学习">
+    <input id="new-cat-desc" placeholder="描述(可选)">
+    <button onclick="addCat()">创建</button>
+  </div>
+  <div id="cat-list" class="cat-list"></div>
+</div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const ACTIVE_SESSION_KEY='paperagent_active_session';
+const S={session:null,loading:false,loadingMode:null,rag:false,categoryId:null,paperCategoryId:null,paperCatEditor:null,paperDeleteConfirm:null,pendingUploadFile:null,sessionMenu:null,sessionRename:null,sessionDeleteConfirm:null,catEditId:null,catDeleteConfirm:null,decomposeProgressTimer:null,decomposeProgress:0,sessionPollTimer:null,sessionPollSessionId:null,sessionMsgSignature:'',pendingSessions:{},activeRequests:{},requestCounter:0,currentMessages:[],messageMap:{},turnRevisionView:{},editingGroupId:null};
+let _catCache=[];
+const esc=s=>s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';
+function fmt(t){
+if(!t)return '';
+const d=t instanceof Date?t:new Date(typeof t==='string'&&t.includes('T')?t.replace(' ','T'):t);
+if(Number.isNaN(d.getTime())){return String(t).slice(0,16).replace('T',' ')}
+const pad=n=>String(n).padStart(2,'0');
+return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+const slbl={introduction:'引言',related_work:'相关工作',methodology:'方法论',experiments:'实验',results:'结果',conclusion:'结论'};
+function startDecomposeProgress(el){
+stopDecomposeProgress();
+S.decomposeProgress=6;
+const bubble=el.querySelector('.bubble');
+const render=()=>{
+if(!bubble)return;
+bubble.innerHTML=`<div><div class="spinner"></div> 正在解析 <strong>${esc(S.pendingUploadFile?.name||'论文')}</strong> 并进行 AI 拆解...</div><div class="task-progress"><div class="track"><div class="fill" style="width:${S.decomposeProgress}%"></div></div><div class="meta"><span>${S.decomposeProgress<35?'提取文本中':S.decomposeProgress<70?'分析结构中':'整理结果中'}</span><span>${Math.round(S.decomposeProgress)}%</span></div></div>`;
+};
+render();
+S.decomposeProgressTimer=setInterval(()=>{
+if(S.decomposeProgress<32)S.decomposeProgress+=6;
+else if(S.decomposeProgress<68)S.decomposeProgress+=3.5;
+else if(S.decomposeProgress<90)S.decomposeProgress+=1.2;
+render();
+},700);
+}
+function finishDecomposeProgress(el){
+if(el){
+S.decomposeProgress=100;
+const bubble=el.querySelector('.bubble');
+if(bubble){
+bubble.innerHTML=`<div><div class="spinner"></div> 正在整理最终结果...</div><div class="task-progress"><div class="track"><div class="fill" style="width:100%"></div></div><div class="meta"><span>即将完成</span><span>100%</span></div></div>`;
+}
+}
+stopDecomposeProgress();
+}
+function stopDecomposeProgress(){
+if(S.decomposeProgressTimer){clearInterval(S.decomposeProgressTimer);S.decomposeProgressTimer=null}
+}
+
+function setActiveSessionId(id){
+if(id)localStorage.setItem(ACTIVE_SESSION_KEY,id);
+else localStorage.removeItem(ACTIVE_SESSION_KEY)
+}
+
+function getActiveSessionId(){
+return localStorage.getItem(ACTIVE_SESSION_KEY)||null
+}
+
+function isSessionPending(sessionId){
+return !!(sessionId&&S.pendingSessions[sessionId])
+}
+
+function getPendingTaskFromMessages(messages){
+const pending=(messages||[]).find(m=>m?.metadata?.status==='pending');
+return pending?.metadata?.task||null
+}
+
+function refreshComposerState(){
+const busy=isSessionPending(S.session);
+const ci=$('ci'),sb=$('sbtn'),fi=$('fi');
+if(ci){
+ci.disabled=busy;
+ci.placeholder=busy?'当前会话处理中，可切换到其他会话继续':'输入消息，或上传论文...'
+}
+if(sb){
+sb.disabled=false;
+sb.classList.toggle('stop',busy);
+sb.title=busy?'停止生成':'发送';
+sb.innerHTML=busy?'<span class="mini-spinner"></span>':'➤'
+}
+if(fi)fi.disabled=busy;
+document.querySelectorAll('.iw .ub input[type="file"]').forEach(el=>el.disabled=busy)
+}
+
+function setSessionPending(sessionId,mode){
+if(!sessionId)return;
+if(mode)S.pendingSessions[sessionId]=mode;
+else delete S.pendingSessions[sessionId];
+refreshComposerState()
+}
+
+function startSessionRequest(sessionId,kind){
+const controller=new AbortController();
+const requestId=`req-${++S.requestCounter}`;
+S.activeRequests[sessionId]={controller,requestId,kind};
+setSessionPending(sessionId,kind);
+return {controller,requestId}
+}
+
+function isCurrentSessionRequest(sessionId,requestId){
+return S.activeRequests[sessionId]?.requestId===requestId
+}
+
+function finishSessionRequest(sessionId,requestId){
+if(isCurrentSessionRequest(sessionId,requestId)){
+delete S.activeRequests[sessionId];
+setSessionPending(sessionId,null)
+}
+}
+
+function abortSessionRequest(sessionId){
+const req=S.activeRequests[sessionId];
+if(req)req.controller.abort();
+return req||null
+}
+
+async function ensureActiveSession(){
+if(S.session)return S.session;
+const s=await api('POST','/api/sessions',{title:'新会话'});
+S.session=s.session_id;
+setActiveSessionId(S.session);
+$('ptitle').textContent=s.title;
+$('msgs').innerHTML='';
+$('welcome').style.display='flex';
+await loadSessions();
+refreshComposerState();
+return S.session
+}
+
+function stopSessionPolling(){
+if(S.sessionPollTimer){clearInterval(S.sessionPollTimer);S.sessionPollTimer=null}
+S.sessionPollSessionId=null;S.sessionMsgSignature=''
+}
+
+function getDecomposeProgress(meta,time){
+const startedAt=meta?.started_at||time;
+const d=startedAt?new Date(typeof startedAt==='string'&&startedAt.includes('T')?startedAt.replace(' ','T'):startedAt):null;
+const elapsed=Math.max(0,d&&!Number.isNaN(d.getTime())?Date.now()-d.getTime():0);
+const seconds=elapsed/1000;
+if(seconds<=0)return 8;
+if(seconds<12)return Math.min(34,8+seconds*2.1);
+if(seconds<45)return Math.min(68,34+(seconds-12)*1.03);
+return Math.min(92,68+(seconds-45)*0.32)
+}
+
+function getDecomposeStage(progress){
+return progress<35?'提取文本中':progress<70?'分析结构中':'整理结果中'
+}
+
+function renderPendingAssistant(meta,time){
+if(meta?.task==='decompose')return renderPendingDecompose(meta,time);
+const text=meta?.task==='rag'?'正在检索知识库并组织回答...':'正在思考中...';
+return `<div><div class="typing"><span></span><span></span><span></span></div>${text}</div>`
+}
+
+function renderPendingDecompose(meta,time){
+const fileName=esc(meta?.display_name||meta?.file_name||'论文');
+const progress=Math.round(getDecomposeProgress(meta,time));
+return `<div><div class="spinner"></div> 正在解析 <strong>${fileName}</strong> 并进行 AI 拆解...</div><div class="task-progress"><div class="track"><div class="fill" style="width:${progress}%"></div></div><div class="meta"><span>${getDecomposeStage(progress)}</span><span>${progress}%</span></div></div>`
+}
+
+function renderAssistantSources(meta){
+const sources=Array.isArray(meta?.sources)?meta.sources:[];
+if(!sources.length)return '';
+return `<div class="sources"><h5>参考片段</h5>${sources.map((s,i)=>{const title=s.paper_title?`<strong>${esc(s.paper_title)}</strong>`:'';const chunkMeta=[];if(s.chunk_type)chunkMeta.push(esc(s.chunk_type));if(typeof s.score==='number')chunkMeta.push(`相似度 ${Number(s.score).toFixed(3)}`);const metaLine=chunkMeta.length?`<span class="meta">${chunkMeta.join(' · ')}</span>`:'';return `<div class="source-item">${title||`<strong>片段 ${i+1}</strong>`}${metaLine}${esc(s.content||'')}</div>`}).join('')}</div>`
+}
+
+function renderStoredMessage(msg){
+const meta=msg?.metadata||{};
+if(msg?.role==='assistant'&&meta.status==='pending'){
+return renderPendingAssistant(meta,msg.created_at)
+}
+if(msg?.role==='assistant')return md(msg?.content||'');
+return esc(msg?.content||'')
+}
+
+function getSessionMessageSignature(messages){
+return (messages||[]).map(m=>`${m.id}:${m.role}:${m.metadata?.task||''}:${m.metadata?.status||''}:${m.content||''}`).join('|')
+}
+
+function buildConversationItems(messages){
+const items=[],groupMap={};
+let i=0;
+while(i<(messages||[]).length){
+const msg=messages[i];
+const meta=msg?.metadata||{};
+const gid=meta.revision_group_id;
+if(gid){
+if(!groupMap[gid]){
+groupMap[gid]={type:'turn',groupId:gid,revisions:{},order:items.length};
+items.push(groupMap[gid])
+}
+const revIdx=Number(meta.revision_index||1);
+if(!groupMap[gid].revisions[revIdx])groupMap[gid].revisions[revIdx]={index:revIdx,user:null,assistant:null};
+if(msg.role==='user')groupMap[gid].revisions[revIdx].user=msg;
+else groupMap[gid].revisions[revIdx].assistant=msg;
+i++;
+continue
+}
+if(msg.role==='user'&&messages[i+1]?.role==='assistant'&&!((messages[i+1]?.metadata||{}).revision_group_id)){
+items.push({type:'legacy_turn',groupId:`legacy-${msg.id}`,revisions:{1:{index:1,user:msg,assistant:messages[i+1]}}});
+i+=2;
+continue
+}
+items.push({type:'legacy_msg',msg});
+i++
+}
+return items
+}
+
+function getSelectedRevision(item){
+const revisions=Object.values(item.revisions||{}).sort((a,b)=>a.index-b.index);
+if(!revisions.length)return null;
+const selected=S.turnRevisionView[item.groupId];
+const found=revisions.find(r=>r.index===selected);
+return found||revisions[revisions.length-1]
+}
+
+function copyIcon(ok=false){
+return ok
+?`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg>`
+:`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="10" height="10" rx="2"></rect><path d="M7 15H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1"></path></svg>`
+}
+
+function editIcon(){
+return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>`
+}
+
+function renderTools(msg,{copy=true,edit=false,revisionNav=''}={}){
+if(!msg)return '';
+const btns=[];
+if(copy)btns.push(`<button class="icon-btn copy-btn" onclick="copyMessage(this,'${msg.id}')" title="复制" aria-label="复制">${copyIcon(false)}</button>`);
+if(edit)btns.push(`<button class="icon-btn" onclick="startEditTurn('${(msg.metadata||{}).revision_group_id||msg.id}')" title="编辑" aria-label="编辑">${editIcon()}</button>`);
+if(revisionNav)btns.push(revisionNav);
+return btns.length?`<div class="msg-tools">${btns.join('')}</div>`:''
+}
+
+function renderSingleMessage(role,msg,options={}){
+if(!msg)return '';
+const av=role==='user'?'U':'P';
+const bubble=role==='assistant'?renderStoredMessage(msg):esc(msg.content||'');
+const extras=role==='assistant'?renderAssistantSources(msg?.metadata||{}):'';
+return `<div class="msg ${role}"><div class="av">${av}</div><div class="msg-col"><div class="bubble">${bubble}</div>${extras}${renderTools(msg,options)}<div class="time">${fmt(msg.created_at)}</div></div></div>`
+}
+
+function renderEditTurn(revision){
+const groupId=(revision?.user?.metadata||{}).revision_group_id;
+const value=esc(revision?.user?.content||'');
+return `<div class="msg user"><div class="av">U</div><div class="msg-col"><div class="bubble"><div class="edit-wrap"><textarea id="edit-msg-${groupId}">${value}</textarea><div class="edit-row"><button class="cancel" onclick="cancelEditTurn()">取消</button><button class="save" onclick="saveEditedTurn('${groupId}')">发送</button></div></div></div><div class="time">${fmt(revision?.user?.created_at)}</div></div></div>`
+}
+
+function renderRevisionNav(item,revisions){
+if(revisions.length<=1)return '';
+const current=getSelectedRevision(item);
+const pos=Math.max(1,revisions.findIndex(r=>r.index===current?.index)+1);
+const total=revisions.length;
+const prevDisabled=pos<=1?'disabled':'';
+const nextDisabled=pos>=total?'disabled':'';
+return `<span class="rev-nav"><button ${prevDisabled} onclick="changeTurnRevision('${item.groupId}',-1)">&lt;</button><span>${pos}/${total}</span><button ${nextDisabled} onclick="changeTurnRevision('${item.groupId}',1)">&gt;</button></span>`
+}
+
+function renderTurnItem(item){
+if(item.type==='legacy_msg')return renderSingleMessage(item.msg.role,item.msg,{copy:true,edit:false});
+const revisions=Object.values(item.revisions||{}).sort((a,b)=>a.index-b.index);
+const revision=getSelectedRevision(item);
+if(!revision)return '';
+const groupId=item.groupId;
+const userMeta=revision.user?.metadata||{};
+const revNav=renderRevisionNav(item,revisions);
+const userHtml=S.editingGroupId===groupId?renderEditTurn(revision):renderSingleMessage('user',revision.user,{copy:true,edit:!!userMeta.revision_group_id,revisionNav:revNav});
+const assistantHtml=renderSingleMessage('assistant',revision.assistant,{copy:!((revision.assistant?.metadata||{}).status==='pending'),edit:false});
+return `<div class="turn-block">${userHtml}${assistantHtml}</div>`
+}
+
+function renderSessionMessages(messages){
+S.currentMessages=messages||[];
+S.messageMap=Object.fromEntries((messages||[]).map(m=>[m.id,m]));
+$('msgs').innerHTML='';
+$('welcome').style.display=messages.length?'none':'flex';
+buildConversationItems(messages).forEach(item=>{
+const wrap=document.createElement('div');
+wrap.innerHTML=renderTurnItem(item);
+if(wrap.firstChild)$('msgs').appendChild(wrap.firstChild)
+});
+if(messages.length)sbtm()
+}
+
+function syncSessionPolling(messages,sessionId){
+const pendingTask=getPendingTaskFromMessages(messages);
+if(pendingTask)setSessionPending(sessionId,pendingTask);
+else if(sessionId===S.session)setSessionPending(sessionId,null);
+const hasPending=!!pendingTask;
+if(!hasPending){
+stopSessionPolling();
+return
+}
+if(S.sessionPollTimer&&S.sessionPollSessionId===sessionId)return;
+stopSessionPolling();
+S.sessionPollSessionId=sessionId;
+S.sessionPollTimer=setInterval(async()=>{
+if(!S.session||S.session!==sessionId){stopSessionPolling();return}
+try{
+const ms=await api('GET',`/api/sessions/${sessionId}/messages`);
+const sig=getSessionMessageSignature(ms);
+if(sig!==S.sessionMsgSignature){
+S.sessionMsgSignature=sig;
+renderSessionMessages(ms);
+await loadSessions()
+}
+syncSessionPolling(ms,sessionId)
+}catch(e){}
+},2500)
+}
+
+async function api(m,u,b,options={}){const o={method:m,headers:{'Content-Type':'application/json'},signal:options.signal};if(b)o.body=JSON.stringify(b);const r=await fetch(u,o);if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail)}return r.json()}
+async function apiUp(u,f,fields={},options={}){const fd=new FormData();fd.append('file',f);Object.entries(fields).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')fd.append(k,v)});const r=await fetch(u,{method:'POST',body:fd,signal:options.signal});if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail)}return r.json()}
+async function apiBatch(u,files){const fd=new FormData();for(const f of files)fd.append('files',f);const r=await fetch(u,{method:'POST',body:fd});if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail)}return r.json()}
+
+function md(t){if(!t)return '';return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/```(\w*)\n?([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h3>$1</h3>').replace(/^[-*] (.+)$/gm,'<li>$1</li>').replace(/\n/g,'<br>')}
+
+async function init(){
+const [sessions]=await Promise.all([loadSessions(),loadPapers(),loadStats(),loadRagConfig(),loadCats()]);
+ckw();
+window.addEventListener('resize',ckw);
+const arr=sessions||[];
+const savedId=getActiveSessionId();
+const targetId=(savedId&&arr.some(x=>x.id===savedId))?savedId:(arr[0]?.id||null);
+if(targetId)await loadSession(targetId);
+else refreshComposerState()
+}
+function ckw(){$('menu-btn').style.display=window.innerWidth<=768?'block':'none'}
+function switchTab(t,btn){document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');['sessions','papers','memories'].forEach(n=>$('tab-'+n).style.display=n===t?'block':'none');if(t==='papers')loadPapers();if(t==='memories')loadMemories()}
+function showModal(id){$(id).classList.add('show')}
+function hideModal(id){$(id).classList.remove('show')}
+
+function toggleRag(){S.rag=$('rag-cb').checked;const h=$('rag-hint'),cs=$('rag-cat-sel');h.textContent=S.rag?'RAG 已开启 — 选择知识库分类进行检索':'关闭时为普通对话，开启后从向量库检索相关内容辅助回答';h.className=S.rag?'rag-on':'';if(S.rag){cs.style.display='inline-block';refreshCatSelects()}else{cs.style.display='none'}}
+
+// Sessions
+async function loadSessions(){try{const d=await api('GET','/api/sessions');rSessions(d);const cur=(d||[]).find(x=>x.id===S.session);if(cur)$('ptitle').textContent=cur.title;return d}catch(e){return []}}
+function rSessions(arr){S.sessions=arr;$('sl').innerHTML=arr.length?arr.map(s=>{const menuOpen=S.sessionMenu===s.id;const renameOpen=S.sessionRename===s.id;const delOpen=S.sessionDeleteConfirm===s.id;const pinned=Number(s.is_pinned)===1;return `<div class="si ${s.id===S.session?'active':''}" onclick="loadSession('${s.id}')"><div class="head"><div class="t" title="${esc(s.title)}">${pinned?'<span class="pin">置顶</span>':''}${esc(s.title)}</div><button class="more" onclick="toggleSessionMenu(event,'${s.id}')" title="更多">⋯</button></div><div class="m">${s.msg_count||0} 条消息 · ${fmt(s.created_at)}</div>${menuOpen?renderSessionMenu({...s,is_pinned:pinned}):''}${renameOpen?renderSessionRename(s):''}${delOpen?renderSessionDelete(s):''}</div>`}).join(''):'<div class="empty">暂无会话</div>'}
+function renderSessionMenu(s){return `<div class="menu" onclick="event.stopPropagation()"><button onclick="toggleSessionPinned('${s.id}', ${s.is_pinned? 'false':'true'})">${s.is_pinned?'取消置顶':'置顶'}</button><button onclick="openSessionRename('${s.id}')">重命名</button><button class="danger" onclick="openSessionDelete('${s.id}')">删除</button></div>`}
+function renderSessionRename(s){return `<div class="inline-panel" onclick="event.stopPropagation()"><div class="ttl">重命名会话</div><input id="session-rename-${s.id}" type="text" value="${esc(s.title)}"><div class="row"><button class="cancel" onclick="closeSessionPanels()">取消</button><button class="save" onclick="saveSessionRename('${s.id}')">保存</button></div></div>`}
+function renderSessionDelete(s){return `<div class="inline-panel" onclick="event.stopPropagation()"><div class="ttl" style="color:#fca5a5">确认删除</div><div style="font-size:12px;color:var(--text2);line-height:1.6">确定删除该会话吗？</div><div class="row"><button class="cancel" onclick="closeSessionPanels()">取消</button><button class="save" style="background:rgba(239,68,68,.88);border-color:var(--danger)" onclick="confirmDeleteSession('${s.id}')">确认删除</button></div></div>`}
+function rerenderSessions(){rSessions(S.sessions||[])}
+function closeSessionPanels(){S.sessionMenu=null;S.sessionRename=null;S.sessionDeleteConfirm=null;rerenderSessions()}
+function toggleSessionMenu(e,id){e.stopPropagation();S.sessionRename=null;S.sessionDeleteConfirm=null;S.sessionMenu=S.sessionMenu===id?null:id;rerenderSessions()}
+function openSessionRename(id){S.sessionMenu=null;S.sessionDeleteConfirm=null;S.sessionRename=id;rerenderSessions();setTimeout(()=>{const el=$(`session-rename-${id}`);if(el){el.focus();el.select()}},0)}
+function openSessionDelete(id){S.sessionMenu=null;S.sessionRename=null;S.sessionDeleteConfirm=id;rerenderSessions()}
+async function createSession(){try{const s=await api('POST','/api/sessions',{title:'新会话'});S.session=s.session_id;setActiveSessionId(S.session);$('ptitle').textContent=s.title;$('msgs').innerHTML='';$('welcome').style.display='flex';await loadSessions();refreshComposerState()}catch(e){alert(e.message)}}
+async function loadSession(id){try{closeSessionPanels();await api('POST',`/api/sessions/${id}/load`);S.session=id;setActiveSessionId(id);const ms=await api('GET',`/api/sessions/${id}/messages`);S.sessionMsgSignature=getSessionMessageSignature(ms);renderSessionMessages(ms);syncSessionPolling(ms,id);const s=S.sessions.find(x=>x.id===id);if(s)$('ptitle').textContent=s.title;rSessions(S.sessions);refreshComposerState()}catch(e){alert(e.message)}}
+async function toggleSessionPinned(id,pinned){try{closeSessionPanels();await api('PUT',`/api/sessions/${id}`,{pinned});await loadSessions()}catch(e){alert(e.message)}}
+async function saveSessionRename(id){const el=$(`session-rename-${id}`);const title=el?el.value.trim():'';if(!title){alert('会话标题不能为空');return}try{closeSessionPanels();await api('PUT',`/api/sessions/${id}`,{title});if(S.session===id)$('ptitle').textContent=title;await loadSessions()}catch(e){alert(e.message)}}
+async function confirmDeleteSession(id){try{closeSessionPanels();await api('DELETE',`/api/sessions/${id}`);delete S.pendingSessions[id];if(S.session===id){stopSessionPolling();S.session=null;setActiveSessionId(null);$('ptitle').textContent='新会话';$('msgs').innerHTML='';$('welcome').style.display='flex'}await loadSessions();refreshComposerState()}catch(e){alert(e.message)}}
+
+// Papers
+async function loadPapers(){try{const qs=S.paperCategoryId?`?category_id=${encodeURIComponent(S.paperCategoryId)}`:'';const d=await api('GET',`/api/papers${qs}`);rPapers(d)}catch(e){}}
+function rPapers(arr){$('pl').innerHTML=arr.length?arr.map(p=>{const cat=_catCache.find(c=>c.id===p.category_id);const badge=cat?`<span class="paper-cat-badge" style="background:${esc(cat.color)}">${esc(cat.name)}</span>`:'';const catOpen=S.paperCatEditor===p.id;const delOpen=S.paperDeleteConfirm===p.id;return`<div class="pi"><div class="t">${esc(p.title)}${badge}</div><div class="kw">${esc(p.authors||'')}</div><div class="acts"><button onclick="viewPaper('${p.id}')">详情</button><button onclick="togglePaperCatEditor('${p.id}')">分类</button><button class="del" onclick="togglePaperDeleteConfirm('${p.id}')">删除</button></div>${catOpen?renderPaperCatEditor(p):''}${delOpen?renderPaperDeleteConfirm(p):''}</div>`}).join(''):'<div class="empty">知识库为空<br>上传论文开始构建</div>';window._papers=arr}
+function renderPaperCatEditor(p){return `<div class="inline-cat" onclick="event.stopPropagation()"><div class="ttl">调整论文分类</div><select id="paper-inline-cat-${p.id}"><option value="">不分类</option>${_catCache.map(c=>`<option value="${c.id}" ${c.id===p.category_id?'selected':''}>${esc(c.name)}</option>`).join('')}</select><div class="row"><button class="cancel" onclick="closePaperCatEditor()">取消</button><button class="save" onclick="savePaperCat('${p.id}')">保存</button></div></div>`}
+function renderPaperDeleteConfirm(p){return `<div class="inline-cat" onclick="event.stopPropagation()"><div class="ttl" style="color:#fca5a5">确认删除</div><div style="font-size:12px;color:var(--text2);line-height:1.6">确定删除该论文吗？</div><div class="row"><button class="cancel" onclick="closePaperDeleteConfirm()">取消</button><button class="save" style="background:rgba(239,68,68,.88);border-color:var(--danger)" onclick="confirmDeletePaper('${p.id}')">确认删除</button></div></div>`}
+function rerenderPapers(){rPapers(window._papers||[])}
+function togglePaperCatEditor(paperId){S.paperDeleteConfirm=null;S.paperCatEditor=S.paperCatEditor===paperId?null:paperId;rerenderPapers()}
+function closePaperCatEditor(){S.paperCatEditor=null;rerenderPapers()}
+function togglePaperDeleteConfirm(paperId){S.paperCatEditor=null;S.paperDeleteConfirm=S.paperDeleteConfirm===paperId?null:paperId;rerenderPapers()}
+function closePaperDeleteConfirm(){S.paperDeleteConfirm=null;rerenderPapers()}
+function selectPaperCat(sel){S.paperCategoryId=sel.value||null;loadPapers()}
+async function viewPaper(id){try{const p=await api('GET',`/api/papers/${id}`);const d=p.decomposed||{};$('mp-title').textContent=d.title||p.title;let h=`<p><strong>作者:</strong> ${esc(p.authors||'')}</p>`;if(d.keywords)h+=`<div class="kwl">${d.keywords.map(k=>`<span class="tag">${esc(k)}</span>`).join('')}</div>`;h+='<div class="dg" style="margin-top:16px">';const fs=[['abstract','摘要'],['research_question','研究问题'],['overall_assessment','总体评价']];fs.forEach(([k,l])=>{if(d[k])h+=`<div class="dc full"><h4>${l}</h4><p>${esc(d[k])}</p></div>`});if(d.contributions?.length)h+=`<div class="dc full"><h4>主要贡献</h4><ul>${d.contributions.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;if(d.key_findings?.length)h+=`<div class="dc full"><h4>关键发现</h4><ul>${d.key_findings.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;if(d.methodology)h+=`<div class="dc full"><h4>方法</h4><p><strong>${esc(d.methodology.name||'')}</strong></p><p>${esc(d.methodology.description||'')}</p></div>`;if(d.section_summary)Object.entries(d.section_summary).forEach(([k,v])=>{if(v)h+=`<div class="dc"><h4>${slbl[k]||k}</h4><p>${esc(v)}</p></div>`});h+='</div>';$('mp-body').innerHTML=h;showModal('modal-paper')}catch(e){alert(e.message)}}
+async function confirmDeletePaper(id){try{S.paperDeleteConfirm=null;await api('DELETE',`/api/papers/${id}`);await loadPapers();await loadStats();await loadCats()}catch(e){alert(e.message)}}
+
+// Decompose (LLM)
+function decompose(file){if(!file)return;const ext=file.name.split('.').pop().toLowerCase();if(!['pdf','txt','md'].includes(ext)){alert('仅支持 PDF/TXT/MD');return}
+S.pendingUploadFile=file;$('upload-file-name').value=file.name;$('upload-title').value='';refreshCatSelects();$('upload-cat-sel').value='';showModal('modal-upload')}
+function cancelUploadFlow(){S.pendingUploadFile=null;$('upload-file-name').value='';$('upload-title').value='';$('upload-cat-sel').value='';hideModal('modal-upload');const fi=$('fi');if(fi)fi.value='';document.querySelectorAll('input[type="file"][accept=".pdf,.txt,.md"]').forEach(el=>{if(el!==$('batch-fi'))el.value=''})}
+async function confirmUploadFlow(){const file=S.pendingUploadFile;if(!file)return;const targetSessionId=await ensureActiveSession();if(isSessionPending(targetSessionId)){alert('当前会话仍在处理中，请切换到其他会话或稍后再试。');return}hideModal('modal-upload');const req=startSessionRequest(targetSessionId,'decompose');$('welcome').style.display='none';const el=addMsg('assistant','<div class="spinner"></div> 正在解析 <strong>'+esc(file.name)+'</strong> 并进行 AI 拆解...');
+S.loadingMode='decompose';startDecomposeProgress(el);
+setTimeout(()=>{if(S.session===targetSessionId)loadSession(targetSessionId)},180);
+try{const r=await apiUp('/api/decompose',file,{title:$('upload-title').value.trim(),category_id:$('upload-cat-sel').value||'',session_id:targetSessionId||''},{signal:req.controller.signal});finishDecomposeProgress(el);el.remove();if(S.session===targetSessionId)await loadSession(targetSessionId);await Promise.all([loadPapers(),loadSessions(),loadStats(),loadCats()])}catch(e){finishDecomposeProgress(el);el.remove();if(e.name!=='AbortError'&&S.session===targetSessionId)addMsg('assistant','<span style="color:var(--danger)">失败: '+esc(e.message)+'</span>')}finally{S.loadingMode=null;finishSessionRequest(targetSessionId,req.requestId);cancelUploadFlow()}}
+
+function renderDec(r){const d=r.decomposed||{};let h=`<div class="dr"><h2>${esc(d.title||r.file)}</h2><div class="meta">${esc(d.authors||'')} · <span style="color:var(--primary-light)">拆解完成</span></div>`;
+if(d.keywords?.length)h+=`<div class="kwl" style="margin-bottom:16px">${d.keywords.map(k=>`<span class="tag">${esc(k)}</span>`).join('')}</div>`;
+h+='<div class="dg">';
+if(d.abstract)h+=`<div class="dc full"><h4>摘要</h4><p>${esc(d.abstract)}</p></div>`;
+if(d.research_question)h+=`<div class="dc full"><h4>核心研究问题</h4><p>${esc(d.research_question)}</p></div>`;
+if(d.methodology){h+=`<div class="dc"><h4>方法论</h4><p><strong>${esc(d.methodology.name||'')}</strong></p>`;if(d.methodology.description)h+=`<p>${esc(d.methodology.description)}</p>`;if(d.methodology.key_techniques?.length)h+=`<ul>${d.methodology.key_techniques.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;h+='</div>'}
+if(d.contributions?.length)h+=`<div class="dc"><h4>主要贡献</h4><ul>${d.contributions.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
+if(d.key_findings?.length)h+=`<div class="dc"><h4>关键发现</h4><ul>${d.key_findings.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
+if(d.limitations?.length)h+=`<div class="dc"><h4>局限性</h4><ul>${d.limitations.map(l=>`<li>${esc(l)}</li>`).join('')}</ul></div>`;
+if(d.future_work)h+=`<div class="dc"><h4>未来工作</h4><p>${esc(d.future_work)}</p></div>`;
+if(d.overall_assessment)h+=`<div class="dc full"><h4>总体评价</h4><p>${esc(d.overall_assessment)}</p></div>`;
+if(d.section_summary)Object.entries(d.section_summary).forEach(([k,v])=>{if(v)h+=`<div class="dc"><h4>${slbl[k]||k}</h4><p>${esc(v)}</p></div>`});
+h+='</div></div>';const div=document.createElement('div');div.innerHTML=h;div.style.cssText='max-width:800px;margin:0 auto 20px';$('msgs').appendChild(div);sbtm()}
+
+// Chat (with optional RAG)
+function copyMessage(btn,messageId){
+const msg=S.messageMap[messageId];
+if(!msg)return;
+navigator.clipboard.writeText(msg.content||'').then(()=>{
+if(!btn)return;
+const tools=btn.closest('.msg-tools');
+if(tools)tools.classList.add('force-show');
+btn.classList.add('copied');
+btn.innerHTML=copyIcon(true);
+clearTimeout(btn._copyTimer);
+btn._copyTimer=setTimeout(()=>{
+btn.classList.remove('copied');
+btn.innerHTML=copyIcon(false);
+if(tools)tools.classList.remove('force-show');
+},1200);
+}).catch(()=>{})
+}
+function startEditTurn(groupId){
+S.editingGroupId=groupId;
+renderSessionMessages(S.currentMessages);
+setTimeout(()=>{
+const el=$(`edit-msg-${groupId}`);
+if(!el)return;
+el.focus();
+el.select();
+el.closest('.msg')?.scrollIntoView({behavior:'smooth',block:'center'});
+},30)
+}
+function cancelEditTurn(){S.editingGroupId=null;renderSessionMessages(S.currentMessages)}
+function changeTurnRevision(groupId,delta){
+const item=buildConversationItems(S.currentMessages).find(x=>x.groupId===groupId);
+if(!item)return;
+const revisions=Object.values(item.revisions||{}).sort((a,b)=>a.index-b.index);
+const current=getSelectedRevision(item);
+const idx=Math.max(0,revisions.findIndex(r=>r.index===current?.index)+delta);
+S.turnRevisionView[groupId]=revisions[Math.min(revisions.length-1,idx)].index;
+renderSessionMessages(S.currentMessages)
+}
+async function stopCurrentGeneration(){
+const sessionId=S.session;
+if(!sessionId||!isSessionPending(sessionId))return;
+abortSessionRequest(sessionId);
+try{await api('POST',`/api/sessions/${sessionId}/stop`,{})}catch(e){}
+delete S.activeRequests[sessionId];
+setSessionPending(sessionId,null);
+await loadSessions();
+if(S.session===sessionId)await loadSession(sessionId)
+}
+function handleComposerAction(){if(isSessionPending(S.session))stopCurrentGeneration();else send()}
+async function send(){const inp=$('ci'),text=inp.value.trim();if(!text)return;const targetSessionId=await ensureActiveSession();if(isSessionPending(targetSessionId))return;const req=startSessionRequest(targetSessionId,S.rag?'rag':'chat');inp.value='';inp.style.height='auto';$('welcome').style.display='none';
+setTimeout(()=>{if(S.session===targetSessionId)loadSession(targetSessionId)},120);
+try{await api('POST','/api/chat',{text,use_rag:S.rag,category_id:S.categoryId,session_id:targetSessionId},{signal:req.controller.signal});if(S.session===targetSessionId)await loadSession(targetSessionId);await loadSessions()}catch(e){if(e.name!=='AbortError'&&S.session===targetSessionId)addMsg('assistant','<span style="color:var(--danger)">'+esc(e.message)+'</span>')}finally{finishSessionRequest(targetSessionId,req.requestId)}}
+async function saveEditedTurn(groupId){
+const sessionId=S.session;
+const el=$(`edit-msg-${groupId}`);
+const text=el?el.value.trim():'';
+if(!sessionId||!text){alert('消息不能为空');return}
+const item=buildConversationItems(S.currentMessages).find(x=>x.groupId===groupId);
+const current=getSelectedRevision(item||{revisions:{}});
+const meta=current?.user?.metadata||{};
+const useRag=(meta.mode||'chat')==='rag';
+const categoryId=meta.category_id||null;
+if(isSessionPending(sessionId))await stopCurrentGeneration();
+const req=startSessionRequest(sessionId,useRag?'rag':'chat');
+S.editingGroupId=null;
+delete S.turnRevisionView[groupId];
+setTimeout(()=>{if(S.session===sessionId)loadSession(sessionId)},120);
+try{await api('POST',`/api/messages/${groupId}/edit`,{session_id:sessionId,text,use_rag:useRag,category_id:categoryId},{signal:req.controller.signal});if(S.session===sessionId)await loadSession(sessionId);await loadSessions()}catch(e){if(e.name!=='AbortError'&&S.session===sessionId)addMsg('assistant','<span style="color:var(--danger)">'+esc(e.message)+'</span>')}finally{finishSessionRequest(sessionId,req.requestId)}}
+
+function addMsg(role,content,time,scroll=true){const div=document.createElement('div');div.className='msg '+role;const av=role==='user'?'U':'P';div.innerHTML=`<div class="av">${av}</div><div class="msg-col"><div class="bubble">${content}</div><div class="time">${time?fmt(time):fmt(new Date())}</div></div>`;$('msgs').appendChild(div);if(scroll)sbtm();return div}
+function sbtm(){$('chat-area').scrollTop=$('chat-area').scrollHeight}
+
+// Memories
+async function loadMemories(){try{const d=await api('GET','/api/memories');rMemories(d,'ml')}catch(e){}}
+function loadMemoriesHtml(){loadMemories();api('GET','/api/memories').then(d=>rMemories(d,'mm-body')).catch(()=>{})}
+function rMemories(arr,id){$(id).innerHTML=arr.length?arr.map(m=>`<div class="mi"><div class="cat">${esc(m.category)} · ⭐${m.importance}</div><div class="txt">${esc(m.content)}</div></div>`).join(''):'<div class="empty">暂无记忆</div>'}
+
+// Batch Index (RAG - no LLM)
+let batchBusy=false;
+function onBatchFiles(files){if(!files.length||batchBusy)return;batchIndex(Array.from(files))}
+async function batchIndex(files){if(batchBusy)return;batchBusy=true;const catId=$('batch-cat-sel')?.value||null;const res=$('batch-result');const prog=$('batch-progress');const fill=$('batch-fill');
+res.style.display='block';prog.style.display='block';fill.style.width='0%';
+res.innerHTML=`<div class="batch-stats"><div class="bs-row"><span>正在索引 ${files.length} 个文件 (分块 + Embedding)${catId?' · 分类: '+_catCache.find(c=>c.id===catId)?.name:''}...</span><span class="spinner"></span></div></div>`;
+try{const fd=new FormData();for(const f of files)fd.append('files',f);if(catId)fd.append('category_id',catId);const r=await fetch('/api/batch-index',{method:'POST',body:fd});if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail)}const d=await r.json();fill.style.width='100%';const ok=d.results.filter(x=>x.status==='ok'),err=d.results.filter(x=>x.status==='error');
+let h=`<div class="batch-stats"><div class="bs-row"><strong>索引完成</strong><span>共 ${d.total} · 成功 <span class="bs-ok">${d.success}</span> · 失败 <span class="bs-err">${err.length}</span></span></div>`;
+h+=`<div class="batch-file-list">`;d.results.forEach(f=>{const cls=f.status==='ok'?'bf-ok':'bf-err';const info=f.status==='ok'?`${f.chunks||0} 块`:f.reason||'';h+=`<div class="bf-item"><span class="bf-status ${cls}"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.file)}</span><span style="color:var(--muted);flex-shrink:0;font-size:11px">${esc(info)}</span></div>`});h+='</div></div>';res.innerHTML=h;
+await Promise.all([loadPapers(),loadStats(),loadRagConfig(),loadCats()])}catch(e){res.innerHTML=`<div class="batch-stats"><div class="bs-row" style="color:var(--danger)"><span>失败: ${esc(e.message)}</span></div></div>`}batchBusy=false}
+
+async function indexDir(){const p=$('dir-input').value.trim();if(!p){alert('请输入目录路径');return}
+batchBusy=true;const res=$('batch-result');const prog=$('batch-progress');const fill=$('batch-fill');
+res.style.display='block';prog.style.display='block';fill.style.width='30%';fill.style.animation='pulse 1.5s infinite';
+res.innerHTML=`<div class="batch-stats"><div class="bs-row"><span>正在扫描目录: ${esc(p)}</span><span class="spinner"></span></div></div>`;
+try{const catId=$('batch-cat-sel')?.value||null;const r=await api('POST','/api/index-dir',{dir_path:p,category_id:catId});fill.style.width='100%';fill.style.animation='none';const ok=r.results.filter(x=>x.status==='ok'),err=r.results.filter(x=>x.status==='error');
+let h=`<div class="batch-stats"><div class="bs-row"><strong>目录索引完成</strong><span>共 ${r.total} · 成功 <span class="bs-ok">${r.success}</span> · 失败 <span class="bs-err">${err.length}</span></span></div>`;
+h+=`<div class="batch-file-list">`;r.results.forEach(f=>{const cls=f.status==='ok'?'bf-ok':'bf-err';h+=`<div class="bf-item"><span class="bf-status ${cls}"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.file)}</span><span style="color:var(--muted);flex-shrink:0">${f.status==='ok'?'✓':'✗'}</span></div>`});h+='</div></div>';res.innerHTML=h;
+await Promise.all([loadPapers(),loadStats(),loadRagConfig()])}catch(e){fill.style.animation='none';res.innerHTML=`<div class="batch-stats"><div class="bs-row" style="color:var(--danger)"><span>${esc(e.message)}</span></div></div>`}batchBusy=false}
+
+// Drag & Drop
+document.addEventListener('DOMContentLoaded',()=>{const dz=$('drop-zone');if(!dz)return;['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('dragover')}));['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('dragover')}));dz.addEventListener('drop',ev=>{if(ev.dataTransfer.files.length)onBatchFiles(ev.dataTransfer.files)})});
+
+// Categories (分类管理)
+async function loadCats(){try{const d=await api('GET','/api/categories');_catCache=d;renderCatList(d);refreshCatSelects()}catch(e){}}
+function renderCatList(arr){$('cat-list').innerHTML=arr.length?arr.map(c=>{const editOpen=S.catEditId===c.id;const delOpen=S.catDeleteConfirm===c.id;return `<div class="cat-item"><span class="cat-color" style="background:${esc(c.color)}"></span><div style="flex:1;min-width:0"><div class="cat-name">${esc(c.name)}</div>${c.description?`<div class="cat-desc">${esc(c.description)}</div>`:''}</div><span class="cat-count">${c.paper_count} 篇</span><div class="cat-acts"><button onclick="openCatEdit('${c.id}')">编辑</button><button class="del" onclick="openCatDelete('${c.id}')">删除</button></div>${editOpen?renderCatEdit(c):''}${delOpen?renderCatDelete(c):''}</div>`}).join(''):'<div class="empty">暂无分类，创建一个来组织论文</div>'}
+function renderCatEdit(c){return `<div class="inline-panel" onclick="event.stopPropagation()"><div class="ttl">编辑分类</div><div class="stack"><input id="cat-name-${c.id}" type="text" value="${esc(c.name)}" placeholder="分类名称"><input id="cat-desc-${c.id}" type="text" value="${esc(c.description||'')}" placeholder="描述(可选)"><input id="cat-color-${c.id}" type="color" value="${esc(c.color||'#6366f1')}" title="选择颜色"></div><div class="row"><button class="cancel" onclick="closeCatPanels()">取消</button><button class="save" onclick="saveCatEdit('${c.id}')">保存</button></div></div>`}
+function renderCatDelete(c){return `<div class="inline-panel" onclick="event.stopPropagation()"><div class="ttl" style="color:#fca5a5">确认删除</div><div style="font-size:12px;color:var(--text2);line-height:1.6">确定删除该分类吗？</div><div class="row"><button class="cancel" onclick="closeCatPanels()">取消</button><button class="save" style="background:rgba(239,68,68,.88);border-color:var(--danger)" onclick="confirmDeleteCat('${c.id}')">确认删除</button></div></div>`}
+async function addCat(){const name=$('new-cat-name').value.trim();if(!name){alert('请输入分类名称');return}const color=$('new-cat-color').value;const desc=$('new-cat-desc').value.trim();try{await api('POST','/api/categories',{name,description:desc,color});$('new-cat-name').value='';$('new-cat-desc').value='';await loadCats()}catch(e){alert(e.message)}}
+function rerenderCats(){renderCatList(_catCache||[])}
+function closeCatPanels(){S.catEditId=null;S.catDeleteConfirm=null;rerenderCats()}
+function openCatEdit(id){S.catDeleteConfirm=null;S.catEditId=S.catEditId===id?null:id;rerenderCats();setTimeout(()=>{const el=$(`cat-name-${id}`);if(el){el.focus();el.select()}},0)}
+function openCatDelete(id){S.catEditId=null;S.catDeleteConfirm=S.catDeleteConfirm===id?null:id;rerenderCats()}
+async function saveCatEdit(id){const nameEl=$(`cat-name-${id}`),descEl=$(`cat-desc-${id}`),colorEl=$(`cat-color-${id}`);const name=nameEl?nameEl.value.trim():'';const desc=descEl?descEl.value.trim():'';const color=colorEl?colorEl.value:'#6366f1';if(!name){alert('分类名称不能为空');return}try{closeCatPanels();await api('PUT',`/api/categories/${id}`,{name,description:desc,color});await loadCats()}catch(e){alert(e.message)}}
+async function confirmDeleteCat(id){try{closeCatPanels();await api('DELETE',`/api/categories/${id}`);await loadCats();await loadPapers()}catch(e){alert(e.message)}}
+function refreshCatSelects(){
+const opts='<option value="">不分类/全部</option>'+_catCache.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+const bs=$('batch-cat-sel');if(bs)bs.innerHTML=opts;
+const us=$('upload-cat-sel');if(us){const cur=us.value;us.innerHTML='<option value="">不分类</option>'+_catCache.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');us.value=_catCache.some(c=>c.id===cur)?cur:''}
+const rs=$('rag-cat-sel');if(rs){const cur=rs.value;rs.innerHTML='<option value="">全部知识库</option><option value="__uncategorized__">未分类知识库</option>'+_catCache.map(c=>`<option value="${c.id}">${esc(c.name)} (${c.paper_count})</option>`).join('');const exists=!cur||cur==='__uncategorized__'||_catCache.some(c=>c.id===cur);rs.value=exists?cur:'';if(!exists)S.categoryId=null}
+const ps=$('paper-cat-sel');if(ps){const cur=S.paperCategoryId||'';ps.innerHTML='<option value="">全部分类</option><option value="__uncategorized__">未分类</option>'+_catCache.map(c=>`<option value="${c.id}">${esc(c.name)} (${c.paper_count})</option>`).join('');const exists=!cur||cur==='__uncategorized__'||_catCache.some(c=>c.id===cur);ps.value=exists?cur:'';if(!exists)S.paperCategoryId=null}
+}
+function selectRagCat(sel){S.categoryId=sel.value||null}
+async function savePaperCat(paperId){const sel=$(`paper-inline-cat-${paperId}`);if(!sel)return;try{await api('PUT',`/api/papers/${paperId}/category`,{category_id:sel.value||''});S.paperCatEditor=null;await Promise.all([loadPapers(),loadCats()])}catch(e){alert(e.message)}}
+
+// RAG Config
+async function loadRagConfig(){try{const c=await api('GET','/api/rag-config');renderRagConfig(c)}catch(e){}}
+function renderRagConfig(c){$('settings-current').innerHTML=[
+['向量数据库',c.vector_db_type],['Embedding 方法',c.embed_method],['Embedding 模型',c.embed_model||'默认'],
+['分块大小',c.chunk_size],['重叠',c.chunk_overlap],['检索 Top-K',c.rag_top_k],
+['向量数量',c.vector_count]
+].map(([l,v])=>`<div class="config-card"><div><div>${l}</div><div class="cc-label">当前值</div></div><div class="cc-val">${esc(String(v))}</div></div>`).join('');
+$('cfg-db').value=c.vector_db_type;$('cfg-embed').value=c.embed_method;$('cfg-model').value=c.embed_model||'';$('cfg-chunk').value=c.chunk_size;$('cfg-overlap').value=c.chunk_overlap;$('cfg-topk').value=c.rag_top_k}
+async function saveSettings(){alert('配置已保存到环境变量，请重启 server.py 生效。')}
+async function resetVector(){if(!confirm('确认清空向量库？此操作不可撤销。'))return;try{await api('POST','/api/rag-reset');await loadRagConfig();await loadStats()}catch(e){alert(e.message)}}
+
+// Stats
+async function loadStats(){try{const s=await api('GET','/api/stats');$('stats').textContent=`${s.paper_count} 篇 · ${s.chunk_count} 块 · ${s.vector_count||0} 向量`}catch(e){$('stats').textContent='...'}}
+
+function setLoading(v){S.loading=v;refreshComposerState()}
+function kd(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}}
+function textareaAutoH(e){e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,120)+'px'}
+document.addEventListener('DOMContentLoaded',()=>{$('ci').addEventListener('input',textareaAutoH);init()});
+</script>
+</body>
+</html>

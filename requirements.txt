@@ -1,0 +1,11 @@
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6
+openai>=1.0.0
+PyPDF2>=3.0.0
+chromadb>=0.4.0
+
+# RAG 可选依赖 (使用对应功能时需要安装)
+# sentence-transformers>=2.2.0  # 本地 Embedding 模型 (EMBED_METHOD=local)
+# faiss-cpu>=1.7.0              # FAISS 向量数据库 (VECTOR_DB_TYPE=faiss)
+python-dotenv>=1.0.0

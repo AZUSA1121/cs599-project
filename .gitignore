@@ -1,0 +1,14 @@
+.env
+.venv/
+.venv-new/
+__pycache__/
+*.pyc
+.idea/
+.DS_Store
+
+# Local runtime data. Use sample_data/ and scripts/init_demo_data.py to reproduce demo data.
+data/
+
+# Keep sample data in the repository.
+!sample_data/
+!sample_data/**
